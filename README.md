@@ -53,6 +53,10 @@ Requires [Node.js](https://nodejs.org/). Windows 10/11 only.
 
 ## Features
 
+- **Fullscreen / Maximize** — Enlarge to full screen using the maximize button `□` or by double-clicking the top bar spacer. Toggle back to restore.
+- **Pan / Move image** — Click and drag the image directly or use arrow keys when zoomed in to reposition reference details anywhere on screen.
+- **Center image** — One-click **Center** button (or double-click the image) to instantly re-center.
+- **Mouse wheel navigation** — Scroll wheel to pan vertically, Shift+wheel horizontally, and Ctrl+wheel to zoom.
 - **Transparent overlay** — Load any image and display it on top of all windows.
 - **Click-through** — Interact with apps underneath the overlay while tracing (e.g. paint in a game).
 - **Always on top** — Stays above fullscreen games and other applications.
@@ -69,9 +73,11 @@ Requires [Node.js](https://nodejs.org/). Windows 10/11 only.
 
 1. **Launch** TraceIt (installer shortcut, portable exe, or `npm start`).
 2. **Upload** — Click **Upload Image** to load a reference image (PNG, JPG, BMP, GIF, WebP).
-3. **Position** — Drag the top bar to move the overlay; it opens centered on screen.
-4. **Adjust** — Use the top bar: **Opacity** and **Scale** sliders, and **Trace** to lock and enable click-through.
-5. **Minimize / Exit** — Use the top bar buttons or the system tray icon.
+3. **Position & Move** — Drag the top bar to move the overlay window; click and drag directly on the image to pan/reposition it (or use Arrow keys).
+4. **Enlarge** — Click the **Maximize** `□` button on the top bar or double-click the empty spacer area to make the overlay full screen.
+5. **Adjust** — Use the top bar: **Opacity** and **Scale** sliders, and **Center** button to re-center.
+6. **Trace** — Click **Trace** to lock the overlay and enable click-through so your clicks pass through to your canvas/game underneath.
+7. **Minimize / Restore / Exit** — Use the top bar buttons or the system tray icon.
 
 The overlay and top bar stay on top of other windows. When **Trace** is on, clicks pass through the image so you can trace in your painting app or game.
 

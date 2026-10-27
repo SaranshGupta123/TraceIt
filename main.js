@@ -7,6 +7,7 @@ const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
 const DEFAULT_OPACITY = 200;
 const MAX_SCREEN_FRACTION = 0.9;
 const TOP_BAR_HEIGHT = 48;
+const TOP_BAR_MIN_WIDTH = 640;
 const FRAME_BORDER = 2;
 
 let splashWindow = null;
@@ -20,6 +21,8 @@ let currentImagePath = null;
 let overlayScale = 1.0;
 let clickThrough = true;
 let traceMode = false;
+let isMaximized = false;
+let preMaximizeBounds = null;
 let topBarDragInterval = null;
 
 function createSplashWindow() {
@@ -102,9 +105,9 @@ function createControlWindow() {
 
 function resizeTopBar(w) {
   if (!topBarWindow || topBarWindow.isDestroyed()) return;
-  const width = Math.max(w, 460);
+  const width = Math.max(w, TOP_BAR_MIN_WIDTH);
   topBarWindow.setResizable(true);
-  topBarWindow.setMinimumSize(460, TOP_BAR_HEIGHT);
+  topBarWindow.setMinimumSize(TOP_BAR_MIN_WIDTH, TOP_BAR_HEIGHT);
   topBarWindow.setSize(width, TOP_BAR_HEIGHT);
   topBarWindow.setResizable(false);
 }
@@ -115,12 +118,15 @@ function createTopBarWindow(width) {
     return topBarWindow;
   }
   topBarWindow = new BrowserWindow({
-    width: Math.max(width || 460, 460),
+    width: Math.max(width || TOP_BAR_MIN_WIDTH, TOP_BAR_MIN_WIDTH),
     height: TOP_BAR_HEIGHT,
+    minWidth: TOP_BAR_MIN_WIDTH,
+    minHeight: TOP_BAR_HEIGHT,
     frame: false,
     alwaysOnTop: true,
     resizable: false,
-    skipTaskbar: true,
+    skipTaskbar: false,
+    title: 'TraceIt',
     webPreferences: {
       preload: getPreloadPath(),
       contextIsolation: true,
@@ -136,9 +142,21 @@ function createTopBarWindow(width) {
     }
   });
   topBarWindow.on('move', () => {
-    if (overlayWindow && !overlayWindow.isDestroyed() && topBarWindow && !topBarWindow.isDestroyed()) {
+    if (!isMaximized && overlayWindow && !overlayWindow.isDestroyed() && topBarWindow && !topBarWindow.isDestroyed()) {
       const [x, y] = topBarWindow.getPosition();
       overlayWindow.setPosition(x, y + TOP_BAR_HEIGHT);
+    }
+  });
+  topBarWindow.on('minimize', () => {
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.hide();
+    }
+  });
+  topBarWindow.on('restore', () => {
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.show();
+      overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+      topBarWindow.setAlwaysOnTop(true, 'screen-saver');
     }
   });
   return topBarWindow;
@@ -189,8 +207,9 @@ function resizeOverlay(w, h) {
 function createOverlayWindow() {
   if (overlayWindow && !overlayWindow.isDestroyed()) return overlayWindow;
   const size = computeOverlaySize(currentImagePath);
+  const barWidth = Math.max(size.width, TOP_BAR_MIN_WIDTH);
   overlayWindow = new BrowserWindow({
-    width: size.width,
+    width: barWidth,
     height: size.height,
     frame: false,
     transparent: true,
@@ -208,7 +227,8 @@ function createOverlayWindow() {
   });
   overlayWindow.loadFile(getRendererPath('overlay'));
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
-  overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  // If traceMode is false, overlay can receive mouse events to pan/drag the image
+  overlayWindow.setIgnoreMouseEvents(traceMode, { forward: true });
   overlayWindow.setOpacity((config.opacity || DEFAULT_OPACITY) / 255);
   overlayWindow.on('closed', () => { overlayWindow = null; });
   return overlayWindow;
@@ -225,15 +245,20 @@ function getCenteredPosition(frameWidth, frameHeight) {
 
 function switchToTopBar() {
   if (controlWindow && !controlWindow.isDestroyed()) controlWindow.hide();
+  isMaximized = false;
   createOverlayWindow();
   const size = computeOverlaySize(currentImagePath);
-  const barWidth = Math.max(size.width, 460);
+  const barWidth = Math.max(size.width, TOP_BAR_MIN_WIDTH);
   const totalHeight = TOP_BAR_HEIGHT + size.height;
   const pos = getCenteredPosition(barWidth, totalHeight);
   if (currentImagePath && overlayWindow && !overlayWindow.isDestroyed()) {
     const fileUrl = pathToFileURL(currentImagePath).href;
-    resizeOverlay(size.width, size.height);
-    const sendImage = () => overlayWindow.webContents.send('set-image', fileUrl, overlayScale);
+    resizeOverlay(barWidth, size.height);
+    const sendImage = () => {
+      overlayWindow.webContents.send('set-image', fileUrl, overlayScale);
+      overlayWindow.webContents.send('trace-state', traceMode);
+      overlayWindow.setIgnoreMouseEvents(traceMode, { forward: true });
+    };
     if (overlayWindow.webContents.isLoading()) {
       overlayWindow.webContents.once('did-finish-load', sendImage);
     } else {
@@ -246,11 +271,102 @@ function switchToTopBar() {
   bar.setPosition(pos.x, pos.y);
   bar.show();
   bar.focus();
+  if (bar.webContents) {
+    bar.webContents.send('maximized-state', false);
+    bar.webContents.send('trace-state', traceMode);
+  }
+}
+
+function toggleMaximize() {
+  if (!topBarWindow || topBarWindow.isDestroyed()) return;
+
+  if (!isMaximized) {
+    // Save current bounds
+    const barBounds = topBarWindow.getBounds();
+    const overlayBounds = (overlayWindow && !overlayWindow.isDestroyed()) ? overlayWindow.getBounds() : null;
+    preMaximizeBounds = { barBounds, overlayBounds };
+
+    // Get work area of current display
+    const currentDisplay = screen.getDisplayMatching(barBounds);
+    const workArea = currentDisplay.workArea;
+
+    // Enlarge top bar to full width
+    topBarWindow.setResizable(true);
+    topBarWindow.setBounds({
+      x: workArea.x,
+      y: workArea.y,
+      width: workArea.width,
+      height: TOP_BAR_HEIGHT,
+    });
+    topBarWindow.setResizable(false);
+
+    // Enlarge overlay to fill remainder of screen below top bar
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.setResizable(true);
+      overlayWindow.setBounds({
+        x: workArea.x,
+        y: workArea.y + TOP_BAR_HEIGHT,
+        width: workArea.width,
+        height: Math.max(60, workArea.height - TOP_BAR_HEIGHT),
+      });
+      overlayWindow.setResizable(false);
+    }
+
+    isMaximized = true;
+    topBarWindow.webContents.send('maximized-state', true);
+  } else {
+    // Restore
+    if (preMaximizeBounds && preMaximizeBounds.barBounds) {
+      const bb = preMaximizeBounds.barBounds;
+      const ob = preMaximizeBounds.overlayBounds;
+
+      topBarWindow.setResizable(true);
+      topBarWindow.setBounds(bb);
+      topBarWindow.setResizable(false);
+
+      if (overlayWindow && !overlayWindow.isDestroyed() && ob) {
+        overlayWindow.setResizable(true);
+        overlayWindow.setBounds(ob);
+        overlayWindow.setResizable(false);
+      }
+    } else {
+      const size = computeOverlaySize(currentImagePath);
+      const barWidth = Math.max(size.width, TOP_BAR_MIN_WIDTH);
+      const pos = getCenteredPosition(barWidth, TOP_BAR_HEIGHT + size.height);
+      topBarWindow.setResizable(true);
+      topBarWindow.setBounds({ x: pos.x, y: pos.y, width: barWidth, height: TOP_BAR_HEIGHT });
+      topBarWindow.setResizable(false);
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.setResizable(true);
+        overlayWindow.setBounds({ x: pos.x, y: pos.y + TOP_BAR_HEIGHT, width: barWidth, height: size.height });
+        overlayWindow.setResizable(false);
+      }
+    }
+
+    isMaximized = false;
+    topBarWindow.webContents.send('maximized-state', false);
+  }
+}
+
+function updateTraceModeState() {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+    overlayWindow.setIgnoreMouseEvents(traceMode, { forward: true });
+    overlayWindow.webContents.send('trace-state', traceMode);
+    overlayWindow.showInactive();
+  }
+  if (topBarWindow && !topBarWindow.isDestroyed()) {
+    topBarWindow.setAlwaysOnTop(true, 'screen-saver');
+    topBarWindow.show();
+    topBarWindow.webContents.send('trace-state', traceMode);
+  }
+  clickThrough = traceMode;
 }
 
 function switchToControl() {
   if (topBarWindow && !topBarWindow.isDestroyed()) topBarWindow.hide();
   if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.hide();
+  isMaximized = false;
   const ctrl = createControlWindow();
   ctrl.show();
   ctrl.focus();
@@ -292,6 +408,10 @@ ipcMain.on('minimize-clicked', () => {
   if (topBarWindow && !topBarWindow.isDestroyed()) topBarWindow.minimize();
 });
 
+ipcMain.on('maximize-toggle', () => {
+  toggleMaximize();
+});
+
 ipcMain.on('exit-clicked', () => {
   saveConfig();
   app.quit();
@@ -312,6 +432,9 @@ ipcMain.on('topbar-move', (_, dx, dy) => {
 ipcMain.on('topbar-drag-start', (_, screenX, screenY) => {
   if (topBarDragInterval) return;
   if (!topBarWindow || topBarWindow.isDestroyed()) return;
+  if (isMaximized) {
+    toggleMaximize();
+  }
   const [barX, barY] = topBarWindow.getPosition();
   const offsetX = screenX - barX;
   const offsetY = screenY - barY;
@@ -342,20 +465,35 @@ ipcMain.on('topbar-drag-end', () => {
 ipcMain.on('set-scale', (_, scale) => {
   overlayScale = Math.max(0.49, Math.min(3, scale));
   if (overlayWindow && !overlayWindow.isDestroyed() && currentImagePath) {
-    const size = computeOverlaySize(currentImagePath);
-    const barWidth = Math.max(size.width, 460);
-    // Get current top bar position to keep everything anchored to it
-    let anchorX, anchorY;
-    if (topBarWindow && !topBarWindow.isDestroyed()) {
-      [anchorX, anchorY] = topBarWindow.getPosition();
-      resizeTopBar(barWidth);
+    if (!isMaximized) {
+      const size = computeOverlaySize(currentImagePath);
+      const barWidth = Math.max(size.width, TOP_BAR_MIN_WIDTH);
+      let anchorX, anchorY;
+      if (topBarWindow && !topBarWindow.isDestroyed()) {
+        [anchorX, anchorY] = topBarWindow.getPosition();
+        resizeTopBar(barWidth);
+      }
+      resizeOverlay(barWidth, size.height);
+      if (topBarWindow && !topBarWindow.isDestroyed() && anchorX !== undefined) {
+        overlayWindow.setPosition(anchorX, anchorY + TOP_BAR_HEIGHT);
+      }
     }
-    resizeOverlay(size.width, size.height);
     overlayWindow.webContents.send('set-scale', overlayScale);
-    // Re-align overlay directly under the top bar
-    if (topBarWindow && !topBarWindow.isDestroyed() && anchorX !== undefined) {
-      overlayWindow.setPosition(anchorX, anchorY + TOP_BAR_HEIGHT);
+    if (topBarWindow && !topBarWindow.isDestroyed()) {
+      topBarWindow.webContents.send('set-scale', overlayScale);
     }
+  }
+});
+
+ipcMain.on('center-image', () => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('center-image');
+  }
+});
+
+ipcMain.on('nudge-pan', (_, dx, dy) => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('nudge-pan', dx, dy);
   }
 });
 
@@ -371,7 +509,13 @@ ipcMain.on('overlay-move', (_, dx, dy) => {
   }
 });
 
-ipcMain.handle('get-initial-config', () => ({ ...config, currentImagePath, overlayScale, traceMode }));
+ipcMain.handle('get-initial-config', () => ({
+  ...config,
+  currentImagePath,
+  overlayScale,
+  traceMode,
+  isMaximized,
+}));
 
 ipcMain.handle('tray-load-image', async () => {
   const result = await dialog.showOpenDialog({
@@ -386,14 +530,19 @@ ipcMain.on('tray-image-selected', (_, imagePath) => {
   if (!imagePath) return;
   currentImagePath = imagePath;
   saveConfig();
+  isMaximized = false;
   createOverlayWindow();
   const fileUrl = pathToFileURL(currentImagePath).href;
   const size = computeOverlaySize(currentImagePath);
-  const barWidth = Math.max(size.width, 460);
+  const barWidth = Math.max(size.width, TOP_BAR_MIN_WIDTH);
   const totalHeight = TOP_BAR_HEIGHT + size.height;
   const pos = getCenteredPosition(barWidth, totalHeight);
-  resizeOverlay(size.width, size.height);
-  const sendImage = () => overlayWindow.webContents.send('set-image', fileUrl, overlayScale);
+  resizeOverlay(barWidth, size.height);
+  const sendImage = () => {
+    overlayWindow.webContents.send('set-image', fileUrl, overlayScale);
+    overlayWindow.webContents.send('trace-state', traceMode);
+    overlayWindow.setIgnoreMouseEvents(traceMode, { forward: true });
+  };
   if (overlayWindow.webContents.isLoading()) {
     overlayWindow.webContents.once('did-finish-load', sendImage);
   } else {
@@ -404,6 +553,10 @@ ipcMain.on('tray-image-selected', (_, imagePath) => {
   const bar = createTopBarWindow(barWidth);
   bar.setPosition(pos.x, pos.y);
   bar.show();
+  if (bar.webContents) {
+    bar.webContents.send('maximized-state', false);
+    bar.webContents.send('trace-state', traceMode);
+  }
   if (controlWindow && !controlWindow.isDestroyed()) controlWindow.hide();
 });
 
@@ -414,24 +567,13 @@ ipcMain.on('set-opacity', (_, value) => {
 
 ipcMain.on('set-click-through', (_, enabled) => {
   clickThrough = enabled;
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.setIgnoreMouseEvents(enabled, { forward: true });
-  }
+  traceMode = enabled;
+  updateTraceModeState();
 });
 
 ipcMain.on('trace-toggle', () => {
   traceMode = !traceMode;
-  // Overlay is always click-through; trace just locks position (handled in renderer)
-  // Re-assert always-on-top to prevent z-order issues
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.setAlwaysOnTop(true, 'screen-saver');
-    overlayWindow.showInactive();
-  }
-  if (topBarWindow && !topBarWindow.isDestroyed()) {
-    topBarWindow.setAlwaysOnTop(true, 'screen-saver');
-    topBarWindow.show();
-    topBarWindow.webContents.send('trace-state', traceMode);
-  }
+  updateTraceModeState();
 });
 
 // --- Tray ---
@@ -463,14 +605,19 @@ function updateTrayMenu() {
         if (imagePath) {
           currentImagePath = imagePath;
           saveConfig();
+          isMaximized = false;
           createOverlayWindow();
           const fileUrl = pathToFileURL(currentImagePath).href;
           const size = computeOverlaySize(currentImagePath);
-          const barWidth = Math.max(size.width, 460);
+          const barWidth = Math.max(size.width, TOP_BAR_MIN_WIDTH);
           const totalHeight = TOP_BAR_HEIGHT + size.height;
           const pos = getCenteredPosition(barWidth, totalHeight);
-          resizeOverlay(size.width, size.height);
-          const sendImage = () => overlayWindow.webContents.send('set-image', fileUrl, overlayScale);
+          resizeOverlay(barWidth, size.height);
+          const sendImage = () => {
+            overlayWindow.webContents.send('set-image', fileUrl, overlayScale);
+            overlayWindow.webContents.send('trace-state', traceMode);
+            overlayWindow.setIgnoreMouseEvents(traceMode, { forward: true });
+          };
           if (overlayWindow.webContents.isLoading()) {
             overlayWindow.webContents.once('did-finish-load', sendImage);
           } else {
@@ -481,6 +628,10 @@ function updateTrayMenu() {
           const bar = createTopBarWindow(barWidth);
           bar.setPosition(pos.x, pos.y);
           bar.show();
+          if (bar.webContents) {
+            bar.webContents.send('maximized-state', false);
+            bar.webContents.send('trace-state', traceMode);
+          }
           if (controlWindow && !controlWindow.isDestroyed()) controlWindow.hide();
         }
       },
@@ -498,24 +649,20 @@ function updateTrayMenu() {
       })),
     },
     {
-      label: 'Click-through (for tracing)',
+      label: 'Trace mode (click-through)',
       type: 'checkbox',
-      checked: clickThrough,
+      checked: traceMode,
       click: (item) => {
-        clickThrough = item.checked;
-        if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.setIgnoreMouseEvents(clickThrough, { forward: true });
-        }
+        traceMode = item.checked;
+        updateTraceModeState();
       },
     },
     {
-      label: 'Move overlay',
+      label: 'Center image',
       click: () => {
-        clickThrough = false;
         if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.setIgnoreMouseEvents(false);
+          overlayWindow.webContents.send('center-image');
         }
-        updateTrayMenu();
       },
     },
     { type: 'separator' },
@@ -527,6 +674,7 @@ function updateTrayMenu() {
 // --- App lifecycle ---
 
 app.whenReady().then(() => {
+  app.setAppUserModelId('com.sig.traceit');
   // Show splash first and wait for it to be visible before loading main UI
   createSplashWindow();
   const splash = splashWindow;

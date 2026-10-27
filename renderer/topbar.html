@@ -10,11 +10,21 @@
 <div id="bar">
   <button id="uploadBtn" class="btn">Upload</button>
   <div class="sg"><span class="lbl">Opacity</span><input type="range" id="opacitySlider" min="0" max="100" value="80"><span class="val" id="opacityLabel">80%</span></div>
-  <div class="sg"><span class="lbl">Scale</span><input type="range" id="scaleSlider" min="49" max="200" value="100"><span class="val" id="scaleLabel">100%</span></div>
-  <button id="traceBtn" class="btn trace">Trace</button>
-  <div class="spacer" id="dragArea"></div>
-  <button id="minBtn" class="wbtn" title="Minimize">&#x2212;</button>
-  <button id="exitBtn" class="wbtn close" title="Exit">&#x2715;</button>
+  <div class="sg"><span class="lbl">Scale</span><input type="range" id="scaleSlider" min="49" max="300" value="100"><span class="val" id="scaleLabel">100%</span></div>
+  <button id="centerBtn" class="btn" title="Center image (Double click image also centers)">Center</button>
+  <button id="traceBtn" class="btn trace" title="Toggle trace mode (locks image & enables click-through)">Trace</button>
+  <div class="spacer" id="dragArea" title="Drag to move window (Double click to maximize)"></div>
+  <div class="win-controls">
+    <button id="minBtn" class="wbtn" title="Minimize">
+      <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 5h8v1H1z" fill="currentColor"/></svg>
+    </button>
+    <button id="maxBtn" class="wbtn" title="Maximize">
+      <svg id="maxIcon" width="10" height="10" viewBox="0 0 10 10"><path d="M1 1v8h8V1H1zm7 7H2V2h6v6z" fill="currentColor"/></svg>
+    </button>
+    <button id="exitBtn" class="wbtn close" title="Exit">
+      <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.7 1L1 1.7 4.3 5 1 8.3l.7.7L5 5.7 8.3 9l.7-.7L5.7 5 9 1.7 8.3 1 5 4.3 1.7 1z" fill="currentColor"/></svg>
+    </button>
+  </div>
 </div>
 <script src="topbar.js"></script>
 </body>

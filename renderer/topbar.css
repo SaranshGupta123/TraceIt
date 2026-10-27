@@ -20,8 +20,8 @@ body {
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: center;
-  padding: 0 10px;
-  gap: 12px;
+  padding: 0 6px 0 10px;
+  gap: 8px;
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
@@ -37,7 +37,7 @@ body {
   background: #222;
   border: 1px solid #333;
   color: #ccc;
-  padding: 5px 14px;
+  padding: 4px 10px;
   font-size: 11px;
   font-family: inherit;
   cursor: pointer;
@@ -65,7 +65,7 @@ body {
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   white-space: nowrap;
 }
 .sg .lbl {
@@ -77,13 +77,14 @@ body {
 .sg .val {
   font-size: 11px;
   color: #aaa;
-  min-width: 30px;
+  min-width: 28px;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 .sg input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
-  width: 60px;
+  width: 46px;
   height: 4px;
   background: #333;
   border-radius: 2px;
@@ -104,10 +105,20 @@ body {
 
 /* Drag spacer */
 .spacer {
-  flex: 1 1 0;
+  flex: 1 1 10px;
   min-width: 10px;
   height: 100%;
   cursor: grab;
+}
+
+/* Window controls wrapper pinned to right - NEVER SHRINKS OR CLIPS */
+.win-controls {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1px;
+  margin-left: auto;
 }
 
 /* Window control buttons */
@@ -115,14 +126,17 @@ body {
   flex: 0 0 auto;
   background: none;
   border: none;
-  color: #555;
-  font-size: 16px;
-  font-family: inherit;
-  padding: 2px 8px;
+  color: #888;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   cursor: pointer;
   border-radius: 3px;
   line-height: 1;
   transition: background .15s, color .15s;
 }
-.wbtn:hover { background: #222; color: #ccc; }
-.wbtn.close:hover { background: #6e1b1b; color: #fff; }
+.wbtn:hover { background: #262626; color: #fff; }
+.wbtn.close:hover { background: #c42b1c; color: #fff; }

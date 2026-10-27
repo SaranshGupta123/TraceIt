@@ -21,6 +21,19 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  background: rgba(0, 0, 0, 0.004);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#imgWrap.dragging {
+  cursor: grabbing;
+}
+
+#imgWrap.tracing {
+  cursor: default;
+  background: transparent;
 }
 
 #imgWrap img {
@@ -28,4 +41,8 @@ body {
   max-height: 100%;
   object-fit: contain;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  will-change: transform;
 }

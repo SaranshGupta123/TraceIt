@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Top bar
   uploadClicked: () => ipcRenderer.send('upload-clicked'),
   minimizeClicked: () => ipcRenderer.send('minimize-clicked'),
+  maximizeToggle: () => ipcRenderer.send('maximize-toggle'),
+  onMaximizedState: (cb) => { ipcRenderer.on('maximized-state', (_, max) => cb(max)); },
   exitClicked: () => ipcRenderer.send('exit-clicked'),
   topBarMove: (dx, dy) => ipcRenderer.send('topbar-move', dx, dy),
   topBarDragStart: (screenX, screenY) => ipcRenderer.send('topbar-drag-start', screenX, screenY),
@@ -20,6 +22,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setOpacity: (value) => ipcRenderer.send('set-opacity', value),
   traceToggle: () => ipcRenderer.send('trace-toggle'),
   onTraceState: (cb) => { ipcRenderer.on('trace-state', (_, active) => cb(active)); },
+  centerImage: () => ipcRenderer.send('center-image'),
+  nudgePan: (dx, dy) => ipcRenderer.send('nudge-pan', dx, dy),
 
   // Overlay
   overlayMove: (x, y) => ipcRenderer.send('overlay-move', x, y),
@@ -28,5 +32,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onSetScale: (cb) => {
     ipcRenderer.on('set-scale', (_, scale) => cb(scale));
+  },
+  onCenterImage: (cb) => {
+    ipcRenderer.on('center-image', () => cb());
+  },
+  onNudgePan: (cb) => {
+    ipcRenderer.on('nudge-pan', (_, dx, dy) => cb(dx, dy));
   },
 });
