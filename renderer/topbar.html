@@ -9,8 +9,8 @@
 <body>
 <div id="bar">
   <button id="uploadBtn" class="btn">Upload</button>
-  <div class="sg"><span class="lbl">Opacity</span><input type="range" id="opacitySlider" min="0" max="100" value="80"><span class="val" id="opacityLabel">80%</span></div>
-  <div class="sg"><span class="lbl">Scale</span><input type="range" id="scaleSlider" min="49" max="300" value="100"><span class="val" id="scaleLabel">100%</span></div>
+  <div class="sg"><span class="lbl">Opacity</span><input type="range" id="opacitySlider" min="0" max="100" value="80"><input class="value-input" type="number" id="opacityValue" min="0" max="100" step="1" value="80" aria-label="Opacity percentage"><span class="unit">%</span></div>
+  <div class="sg"><span class="lbl">Scale</span><input type="range" id="scaleSlider" min="49" max="300" value="100"><input class="value-input" type="number" id="scaleValue" min="49" max="300" step="1" value="100" aria-label="Scale percentage"><span class="unit">%</span></div>
   <button id="centerBtn" class="btn" title="Center image (Double click image also centers)">Center</button>
   <button id="traceBtn" class="btn trace" title="Toggle trace mode (locks image & enables click-through)">Trace</button>
   <div class="spacer" id="dragArea" title="Drag to move window (Double click to maximize)"></div>

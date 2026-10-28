@@ -74,12 +74,34 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.sg .val {
-  font-size: 11px;
+.sg .value-input {
+  width: 38px;
+  padding: 2px 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  outline: none;
+  background: transparent;
   color: #aaa;
-  min-width: 28px;
+  font-size: 11px;
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+.sg .value-input:focus {
+  border-color: #444;
+  background: #1a1a1a;
+  color: #fff;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.sg .value-input::-webkit-inner-spin-button,
+.sg .value-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.sg .unit {
+  margin-left: -5px;
+  font-size: 11px;
+  color: #777;
 }
 .sg input[type="range"] {
   -webkit-appearance: none;

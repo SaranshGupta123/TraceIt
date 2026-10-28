@@ -101,21 +101,34 @@ bar.addEventListener('pointercancel', endDrag);
 
 // --- Scale and opacity controls ---
 const scaleSlider = document.getElementById('scaleSlider');
-const scaleLabel = document.getElementById('scaleLabel');
+const scaleValue = document.getElementById('scaleValue');
 const opacitySlider = document.getElementById('opacitySlider');
-const opacityLabel = document.getElementById('opacityLabel');
+const opacityValue = document.getElementById('opacityValue');
+
+function clampPercent(value, min, max) {
+  return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+function updateScaleControls(value) {
+  const pct = clampPercent(value, Number(scaleSlider.min), Number(scaleSlider.max));
+  scaleSlider.value = String(pct);
+  scaleValue.value = String(pct);
+}
+
+function updateOpacityControls(value) {
+  const pct = clampPercent(value, Number(opacitySlider.min), Number(opacitySlider.max));
+  opacitySlider.value = String(pct);
+  opacityValue.value = String(pct);
+}
 
 if (window.electronAPI) {
   window.electronAPI.getInitialConfig().then((cfg) => {
     if (cfg && typeof cfg.overlayScale === 'number') {
-      const pct = Math.round(cfg.overlayScale * 100);
-      scaleSlider.value = Math.max(49, Math.min(300, pct));
-      scaleLabel.textContent = scaleSlider.value + '%';
+      updateScaleControls(cfg.overlayScale * 100);
     }
     if (cfg && typeof cfg.opacity === 'number') {
       const pct = Math.round((cfg.opacity / 255) * 100);
-      opacitySlider.value = Math.max(0, Math.min(100, pct));
-      opacityLabel.textContent = opacitySlider.value + '%';
+      updateOpacityControls(pct);
     }
     if (cfg && typeof cfg.traceMode === 'boolean') {
       setTraceUI(cfg.traceMode);
@@ -127,23 +140,43 @@ if (window.electronAPI) {
 
   if (window.electronAPI.onSetScale) {
     window.electronAPI.onSetScale((scale) => {
-      const pct = Math.round(scale * 100);
-      scaleSlider.value = Math.max(49, Math.min(300, pct));
-      scaleLabel.textContent = scaleSlider.value + '%';
+      updateScaleControls(scale * 100);
     });
   }
 }
 
 scaleSlider.addEventListener('input', () => {
   const pct = parseInt(scaleSlider.value, 10);
-  scaleLabel.textContent = pct + '%';
+  scaleValue.value = String(pct);
   if (window.electronAPI) window.electronAPI.setScale(pct / 100);
+});
+
+scaleValue.addEventListener('change', () => {
+  const value = scaleValue.valueAsNumber;
+  updateScaleControls(Number.isFinite(value) ? value : Number(scaleSlider.value));
+  if (window.electronAPI) window.electronAPI.setScale(Number(scaleSlider.value) / 100);
+});
+
+scaleValue.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') scaleValue.blur();
 });
 
 opacitySlider.addEventListener('input', () => {
   const pct = parseInt(opacitySlider.value, 10);
-  opacityLabel.textContent = pct + '%';
+  opacityValue.value = String(pct);
   if (window.electronAPI) window.electronAPI.setOpacity(Math.round((pct / 100) * 255));
+});
+
+opacityValue.addEventListener('change', () => {
+  const value = opacityValue.valueAsNumber;
+  updateOpacityControls(Number.isFinite(value) ? value : Number(opacitySlider.value));
+  if (window.electronAPI) {
+    window.electronAPI.setOpacity(Math.round((Number(opacitySlider.value) / 100) * 255));
+  }
+});
+
+opacityValue.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') opacityValue.blur();
 });
 
 // Keyboard controls when top bar has focus

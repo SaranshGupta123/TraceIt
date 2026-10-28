@@ -61,8 +61,8 @@ Requires [Node.js](https://nodejs.org/). Windows 10/11 only.
 - **Click-through** — Interact with apps underneath the overlay while tracing (e.g. paint in a game).
 - **Always on top** — Stays above fullscreen games and other applications.
 - **Trace mode** — One-click toggle to lock the overlay and enable click-through so you can trace without moving the image.
-- **Adjustable opacity** — Slider on the top bar to control overlay transparency.
-- **Adjustable scale** — Slider to resize the overlay; top bar and image resize together.
+- **Adjustable opacity** — Use the top-bar slider or enter a custom percentage from 0% to 100%.
+- **Adjustable scale** — Use the top-bar slider or enter a custom percentage from 49% to 300%; the top bar and image resize together.
 - **Splash screen** — Loading screen on launch (installer: appears as soon as you run the app; portable: after unpack).
 - **Dark UI** — Sleek dark theme; top bar stays visible and draggable.
 - **System tray** — App runs in the tray; load image, opacity, click-through, and exit from the tray menu.
@@ -75,7 +75,7 @@ Requires [Node.js](https://nodejs.org/). Windows 10/11 only.
 2. **Upload** — Click **Upload Image** to load a reference image (PNG, JPG, BMP, GIF, WebP).
 3. **Position & Move** — Drag the top bar to move the overlay window; click and drag directly on the image to pan/reposition it (or use Arrow keys).
 4. **Enlarge** — Click the **Maximize** `□` button on the top bar or double-click the empty spacer area to make the overlay full screen.
-5. **Adjust** — Use the top bar: **Opacity** and **Scale** sliders, and **Center** button to re-center.
+5. **Adjust** — Use the top bar's **Opacity** and **Scale** sliders, or select their percentage fields to enter exact values. Use **Center** to re-center.
 6. **Trace** — Click **Trace** to lock the overlay and enable click-through so your clicks pass through to your canvas/game underneath.
 7. **Minimize / Restore / Exit** — Use the top bar buttons or the system tray icon.
 

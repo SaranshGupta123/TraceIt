@@ -229,7 +229,7 @@ function createOverlayWindow() {
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
   // If traceMode is false, overlay can receive mouse events to pan/drag the image
   overlayWindow.setIgnoreMouseEvents(traceMode, { forward: true });
-  overlayWindow.setOpacity((config.opacity || DEFAULT_OPACITY) / 255);
+  overlayWindow.setOpacity(config.opacity / 255);
   overlayWindow.on('closed', () => { overlayWindow = null; });
   return overlayWindow;
 }
